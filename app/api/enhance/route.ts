@@ -8,7 +8,11 @@ const request=z.object({
   mode:z.enum(["enhance","storyboard","character_bible","prompt_pack","page_plan"]),
 });
 
-function getModel(){
+function getModel(requestKey?:string){
+  if(requestKey){
+    const provider=createOpenAI({apiKey:requestKey});
+    return provider(process.env.OPENAI_MODEL || "gpt-4.1-mini");
+  }
   if(process.env.OPENROUTER_API_KEY){
     const provider=createOpenAI({
       apiKey:process.env.OPENROUTER_API_KEY,
@@ -52,10 +56,11 @@ function taskInstructions(mode:string){
 export async function POST(req:Request){
   try{
     const body=request.parse(await req.json());
-    const model=getModel();
+    const requestKey=req.headers.get("x-openai-api-key") || undefined;
+    const model=getModel(requestKey);
     if(!model){
       return Response.json({
-        error:"No AI provider is configured. Add OPENROUTER_API_KEY, AI_GATEWAY_API_KEY, or OPENAI_API_KEY in Vercel Environment Variables, then redeploy."
+        error:"No AI provider is configured. Add an OpenAI key in the app or configure OPENROUTER_API_KEY, AI_GATEWAY_API_KEY, or OPENAI_API_KEY in Vercel Environment Variables."
       },{status:503});
     }
 
@@ -86,7 +91,7 @@ ${manuscript}`;
 
     return Response.json({
       result:result.text,
-      provider:process.env.OPENROUTER_API_KEY?"OpenRouter":process.env.AI_GATEWAY_API_KEY?"Vercel AI Gateway":"OpenAI",
+      provider:requestKey?"OpenAI (session key)":process.env.OPENROUTER_API_KEY?"OpenRouter":process.env.AI_GATEWAY_API_KEY?"Vercel AI Gateway":"OpenAI",
     });
   }catch(e){
     const message=e instanceof Error?e.message:"Generation failed";
