@@ -7,9 +7,10 @@ const request=z.object({
   style:z.string().min(1),
   mode:z.enum(["enhance","storyboard","character_bible","prompt_pack","page_plan"]),
   provider:z.enum(["auto","horde","openrouter","gemini","pollinations","openai"]).default("auto"),
+  hordeModel:z.string().max(200).optional(),
 });
 
-async function generateWithProvider(provider:string,keys:{openai?:string;openrouter?:string;gemini?:string;pollinations?:string},instructions:string){
+async function generateWithProvider(provider:string,keys:{openai?:string;openrouter?:string;gemini?:string;pollinations?:string},instructions:string,hordeModel?:string){
   const chosen=provider==="auto"
     ? (process.env.STORYBOOK_DISABLE_HORDE==="true"
         ? (keys.openrouter?"openrouter":keys.gemini?"gemini":keys.pollinations?"pollinations":keys.openai?"openai":process.env.OPENROUTER_API_KEY?"openrouter":process.env.GEMINI_API_KEY?"gemini":process.env.POLLINATIONS_API_KEY?"pollinations":process.env.OPENAI_API_KEY?"openai":"")
@@ -23,7 +24,7 @@ async function generateWithProvider(provider:string,keys:{openai?:string;openrou
       headers:{"content-type":"application/json","apikey":apiKey,"Client-Agent":"Storybook-Forge:1.0"},
       body:JSON.stringify({
         prompt:instructions+"\n\nProcess the manuscript now. Return only the requested production material.",
-        models:process.env.AI_HORDE_TEXT_MODELS?process.env.AI_HORDE_TEXT_MODELS.split(",").map(x=>x.trim()).filter(Boolean):["koboldcpp/Erato"],
+        models:hordeModel&&hordeModel!=="auto"?[hordeModel]:(process.env.AI_HORDE_TEXT_MODELS?process.env.AI_HORDE_TEXT_MODELS.split(",").map(x=>x.trim()).filter(Boolean):["koboldcpp/Qwen3.5-4B.Q5_K_M"]),
         params:{max_length:4096,max_context_length:16384,temperature:0.4,top_p:0.9}
       })
     });
@@ -131,7 +132,7 @@ ${body.text.slice(0,100000)}`;
       openrouter:req.headers.get("x-openrouter-api-key")||undefined,
       gemini:req.headers.get("x-gemini-api-key")||undefined,
       pollinations:req.headers.get("x-pollinations-api-key")||undefined
-    },instructions);
+    },instructions,body.hordeModel);
 
     if(!generated.text) throw new Error("The selected AI provider returned an empty response.");
     return Response.json({result:generated.text,provider:generated.provider});
