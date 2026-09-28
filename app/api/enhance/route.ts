@@ -6,13 +6,46 @@ const request=z.object({
   text:z.string().min(20),
   style:z.string().min(1),
   mode:z.enum(["enhance","storyboard","character_bible","prompt_pack","page_plan"]),
-  provider:z.enum(["auto","openrouter","gemini","pollinations","openai"]).default("auto"),
+  provider:z.enum(["auto","horde","openrouter","gemini","pollinations","openai"]).default("auto"),
 });
 
 async function generateWithProvider(provider:string,keys:{openai?:string;openrouter?:string;gemini?:string;pollinations?:string},instructions:string){
   const chosen=provider==="auto"
-    ? (keys.openrouter?"openrouter":keys.gemini?"gemini":keys.pollinations?"pollinations":keys.openai?"openai":process.env.OPENROUTER_API_KEY?"openrouter":process.env.GEMINI_API_KEY?"gemini":process.env.POLLINATIONS_API_KEY?"pollinations":process.env.OPENAI_API_KEY?"openai":"")
+    ? (process.env.STORYBOOK_DISABLE_HORDE==="true"
+        ? (keys.openrouter?"openrouter":keys.gemini?"gemini":keys.pollinations?"pollinations":keys.openai?"openai":process.env.OPENROUTER_API_KEY?"openrouter":process.env.GEMINI_API_KEY?"gemini":process.env.POLLINATIONS_API_KEY?"pollinations":process.env.OPENAI_API_KEY?"openai":"")
+        : "horde")
     : provider;
+
+  if(chosen==="horde"){
+    const apiKey=process.env.AI_HORDE_API_KEY||"0000000000";
+    const submit=await fetch("https://aihorde.net/api/v2/generate/text/async",{
+      method:"POST",
+      headers:{"content-type":"application/json","apikey":apiKey,"Client-Agent":"Storybook-Forge:1.0"},
+      body:JSON.stringify({
+        prompt:instructions+"\n\nProcess the manuscript now. Return only the requested production material.",
+        models:process.env.AI_HORDE_TEXT_MODELS?process.env.AI_HORDE_TEXT_MODELS.split(",").map(x=>x.trim()).filter(Boolean):["koboldcpp/Erato"],
+        params:{max_length:4096,max_context_length:16384,temperature:0.4,top_p:0.9}
+      })
+    });
+    const submitted:any=await submit.json();
+    if(!submit.ok || !submitted?.id) throw new Error(submitted?.message||"AI Horde text request failed.");
+    const deadline=Date.now()+120000;
+    while(Date.now()<deadline){
+      await new Promise(r=>setTimeout(r,2500));
+      const statusResponse=await fetch("https://aihorde.net/api/v2/generate/text/status/"+encodeURIComponent(submitted.id),{
+        headers:{"apikey":apiKey,"Client-Agent":"Storybook-Forge:1.0"}
+      });
+      const status:any=await statusResponse.json();
+      if(!statusResponse.ok) throw new Error(status?.message||"AI Horde status request failed.");
+      if(status.done){
+        const out=status.generations?.map((g:any)=>g.text||"").join("\n").trim()||"";
+        if(!out) throw new Error("AI Horde completed without text.");
+        return {text:out,provider:"AI Horde (free, no key)"};
+      }
+      if(status.faulted) throw new Error(status.message||"AI Horde worker failed.");
+    }
+    throw new Error("AI Horde is busy right now. Try again in a moment.");
+  }
 
   if(chosen==="openrouter" || chosen==="openai"){
     const key=chosen==="openrouter" ? (keys.openrouter||process.env.OPENROUTER_API_KEY) : (keys.openai||process.env.OPENAI_API_KEY);
@@ -60,7 +93,7 @@ async function generateWithProvider(provider:string,keys:{openai?:string;openrou
     return {text:result.text,provider:"Pollinations"};
   }
 
-  throw new Error("No AI provider configured. Use OpenRouter Free, Gemini, Pollinations, or OpenAI.");
+  throw new Error("No AI provider configured.");
 }
 
 function taskInstructions(mode:string){
