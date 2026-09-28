@@ -6,7 +6,7 @@ const request=z.object({
   text:z.string().min(20),
   style:z.string().min(1),
   mode:z.enum(["enhance","storyboard","character_bible","prompt_pack","page_plan"]),
-  provider:z.enum(["auto","horde","openrouter","gemini","pollinations","openai","custom"]).default("auto"),
+  provider:z.enum(["auto","horde","openrouter","gemini","pollinations","openai","kobold","custom"]).default("auto"),
   customEndpoint:z.string().url().optional(),
   hordeModel:z.string().max(200).optional(),
 });
@@ -47,6 +47,21 @@ async function generateWithProvider(provider:string,keys:{openai?:string;openrou
       if(status.faulted) throw new Error(status.message||"AI Horde worker failed.");
     }
     throw new Error("AI Horde is busy right now. Try again in a moment.");
+  }
+
+  if(chosen==="kobold"){
+    if(!keys.customEndpoint) throw new Error("Kobold/Ooba endpoint URL missing.");
+    const endpoint=keys.customEndpoint.replace(/\\/$/,"");
+    const response=await fetch(endpoint+"/api/v1/generate",{
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({prompt:instructions+"\\n\\nProcess the manuscript now. Return only the requested production material.",max_length:4096,temperature:0.4,top_p:0.9})
+    });
+    const data:any=await response.json();
+    if(!response.ok) throw new Error(data?.detail||data?.error||"Kobold/Ooba endpoint failed.");
+    const text=data?.results?.[0]?.text||"";
+    if(!text) throw new Error("Kobold/Ooba endpoint returned no text.");
+    return {text,provider:"Kobold/Ooba compatible endpoint"};
   }
 
   if(chosen==="custom"){
