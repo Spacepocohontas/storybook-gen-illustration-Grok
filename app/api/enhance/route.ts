@@ -11,7 +11,7 @@ const request=z.object({
   hordeModel:z.string().max(200).optional(),
 });
 
-async function generateWithProvider(provider:string,keys:{openai?:string;openrouter?:string;gemini?:string;pollinations?:string},instructions:string,hordeModel?:string){
+async function generateWithProvider(provider:string,keys:{openai?:string;openrouter?:string;gemini?:string;pollinations?:string;customEndpoint?:string},instructions:string,hordeModel?:string){
   const chosen=provider==="auto"
     ? (process.env.STORYBOOK_DISABLE_HORDE==="true"
         ? (keys.openrouter?"openrouter":keys.gemini?"gemini":keys.pollinations?"pollinations":keys.openai?"openai":process.env.OPENROUTER_API_KEY?"openrouter":process.env.GEMINI_API_KEY?"gemini":process.env.POLLINATIONS_API_KEY?"pollinations":process.env.OPENAI_API_KEY?"openai":"")
