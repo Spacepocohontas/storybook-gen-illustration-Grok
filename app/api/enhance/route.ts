@@ -6,7 +6,8 @@ const request=z.object({
   text:z.string().min(20),
   style:z.string().min(1),
   mode:z.enum(["enhance","storyboard","character_bible","prompt_pack","page_plan"]),
-  provider:z.enum(["auto","horde","openrouter","gemini","pollinations","openai"]).default("auto"),
+  provider:z.enum(["auto","horde","openrouter","gemini","pollinations","openai","custom"]).default("auto"),
+  customEndpoint:z.string().url().optional(),
   hordeModel:z.string().max(200).optional(),
 });
 
@@ -46,6 +47,21 @@ async function generateWithProvider(provider:string,keys:{openai?:string;openrou
       if(status.faulted) throw new Error(status.message||"AI Horde worker failed.");
     }
     throw new Error("AI Horde is busy right now. Try again in a moment.");
+  }
+
+  if(chosen==="custom"){
+    if(!keys.customEndpoint) throw new Error("Custom endpoint URL missing.");
+    const endpoint=keys.customEndpoint.replace(/\\/$/,"");
+    const response=await fetch(endpoint.includes("/v1/")?endpoint+"/chat/completions":endpoint+"/v1/chat/completions",{
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({model:"default",messages:[{role:"system",content:instructions},{role:"user",content:"Process the manuscript now. Return only the requested production material."}],temperature:0.4})
+    });
+    const data:any=await response.json();
+    if(!response.ok) throw new Error(data?.error?.message||"Custom OpenAI-compatible endpoint failed.");
+    const text=data?.choices?.[0]?.message?.content||"";
+    if(!text) throw new Error("Custom endpoint returned no text.");
+    return {text,provider:"Custom OpenAI-compatible endpoint"};
   }
 
   if(chosen==="openrouter" || chosen==="openai"){
@@ -130,6 +146,7 @@ ${body.text.slice(0,100000)}`;
     const generated=await generateWithProvider(body.provider,{
       openai:req.headers.get("x-openai-api-key")||undefined,
       openrouter:req.headers.get("x-openrouter-api-key")||undefined,
+      customEndpoint:body.customEndpoint,
       gemini:req.headers.get("x-gemini-api-key")||undefined,
       pollinations:req.headers.get("x-pollinations-api-key")||undefined
     },instructions,body.hordeModel);
