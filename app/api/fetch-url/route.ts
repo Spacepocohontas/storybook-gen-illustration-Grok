@@ -20,7 +20,7 @@ export async function POST(req:Request){
     const url=new URL(body.url);
     if(!isAllowed(url))return Response.json({error:"That host is not on the allowlist. Paste the raw JSON or a link from Chub AI, SpicyChat, Character.AI, CrushOn.AI, Shapes.inc, TavernAI, Rentry, or Pastebin."},{status:400});
     const controller=new AbortController();
-    const timer=setTimeout(()=>controllerAbortController().abort(),20000);
+    const timer=setTimeout(()=>controller.abort(),20000);
     const r=await fetch(url.toString(),{headers:{"user-agent":"Storybook-Forge/1.0","accept":"application/json,text/plain,*/*"},redirect:"follow",signal:controller.signal});
     clearTimeout(timer);
     if(!r.ok)return Response.json({error:"Remote server returned "+r.status},{status:400});
