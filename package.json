@@ -1,0 +1,27 @@
+{
+  "name": "storybook-gen-illustration",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "lucide-react": "latest",
+    "mammoth": "^1.9.1",
+    "next": "latest",
+    "pdfjs-dist": "^5.4.149",
+    "react": "latest",
+    "react-dom": "latest",
+    "ai": "latest",
+    "zod": "latest",
+    "@ai-sdk/openai": "latest"
+  },
+  "devDependencies": {
+    "typescript": "latest"
+  }
+}
