@@ -16,10 +16,10 @@ export async function POST(req:Request){
       method:"POST",
       headers:{"content-type":"application/json","apikey":apiKey,"Client-Agent":"Storybook-Forge:1.0"},
       body:JSON.stringify({
-        prompt:body.prompt,
+        prompt:body.negative?.trim()?`${body.prompt} ### ${body.negative.trim()}`:body.prompt,
         models:process.env.AI_HORDE_IMAGE_MODELS
           ? process.env.AI_HORDE_IMAGE_MODELS.split(",").map(x=>x.trim()).filter(Boolean)
-          : ["AlbedoBase XL"],
+          : ["AlbedoBase XL 3.1"],
         params:{
           width:body.width,
           height:body.height,
@@ -27,7 +27,6 @@ export async function POST(req:Request){
           cfg_scale:7.5,
           seed:body.seed,
           n:1,
-          negative_prompt:body.negative,
           sampler_name:"k_euler_a"
         }
       })
@@ -46,8 +45,9 @@ export async function POST(req:Request){
       if(status.done){
         const img=status.generations?.[0]?.img;
         if(!img) throw new Error("AI Horde completed without an image.");
-        const mime=String(img).startsWith("data:image/")?"": "data:image/webp;base64,";
-        return Response.json({image:mime+img,provider:"AI Horde (free, no key)"});
+        const value=String(img);
+        const image=value.startsWith("data:image/")||value.startsWith("http://")||value.startsWith("https://")?value:"data:image/webp;base64,"+value;
+        return Response.json({image,provider:"AI Horde (free, no key)"});
       }
     }
     throw new Error("AI Horde is busy right now. Try again in a moment.");
