@@ -25,7 +25,7 @@ async function generateWithProvider(provider:string,keys:{openai?:string;openrou
       body:JSON.stringify({
         prompt:instructions+"\n\nProcess the manuscript now. Return only the requested production material.",
         models:hordeModel&&hordeModel!=="auto"?[hordeModel]:(process.env.AI_HORDE_TEXT_MODELS?process.env.AI_HORDE_TEXT_MODELS.split(",").map(x=>x.trim()).filter(Boolean):["koboldcpp/Qwen3.5-4B.Q5_K_M"]),
-        params:{max_length:4096,max_context_length:16384,temperature:0.4,top_p:0.9}
+        params:{max_length:apiKey==="0000000000"?512:4096,max_context_length:apiKey==="0000000000"?8192:16384,temperature:0.4,top_p:0.9}
       })
     });
     const submitted:any=await submit.json();
@@ -69,7 +69,7 @@ async function generateWithProvider(provider:string,keys:{openai?:string;openrou
   if(chosen==="gemini"){
     const key=keys.gemini||process.env.GEMINI_API_KEY;
     if(!key) throw new Error("Gemini key missing. Create a free Gemini API key in Google AI Studio and paste it into the app.");
-    const model=process.env.GEMINI_MODEL||"gemini-2.5-flash";
+    const model=process.env.GEMINI_MODEL||"gemini-3.8-flash";
     const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,{
       method:"POST",
       headers:{"content-type":"application/json"},
