@@ -14,7 +14,7 @@ export async function POST(req:Request){
     const apiKey=process.env.AI_HORDE_API_KEY||"0000000000";
     const submit=await fetch("https://aihorde.net/api/v2/generate/async",{
       method:"POST",
-      headers:{"content-type":"application/json","apikey":apiKey,"Client-Agent":"Storybook-Forge:1.0"},
+      headers:{"content-type":"application/json","apikey":apiKey,"Client-Agent":"Storybook-Forge:1.1"},
       body:JSON.stringify({
         prompt:body.negative?.trim()?`${body.prompt} ### ${body.negative.trim()}`:body.prompt,
         models:process.env.AI_HORDE_IMAGE_MODELS
@@ -25,7 +25,8 @@ export async function POST(req:Request){
           height:body.height,
           steps:25,
           cfg_scale:7.5,
-          seed:body.seed,
+          // AI Horde's current schema accepts seeds as strings, even when numeric.
+          seed:String(body.seed),
           n:1,
           sampler_name:"k_euler_a"
         }
@@ -35,14 +36,21 @@ export async function POST(req:Request){
     if(!submit.ok || !submitted?.id) throw new Error(submitted?.message||"AI Horde image request failed.");
     const deadline=Date.now()+180000;
     while(Date.now()<deadline){
-      await new Promise(r=>setTimeout(r,3500));
-      const statusResponse=await fetch("https://aihorde.net/api/v2/generate/status/"+encodeURIComponent(submitted.id),{
-        headers:{"apikey":apiKey,"Client-Agent":"Storybook-Forge:1.0"}
+      await new Promise(r=>setTimeout(r,5000));
+      // The lightweight check endpoint is safe to poll. The full status endpoint
+      // is rate-limited and should only be requested after completion.
+      const checkResponse=await fetch("https://aihorde.net/api/v2/generate/check/"+encodeURIComponent(submitted.id),{
+        headers:{"Client-Agent":"Storybook-Forge:1.1"}
       });
-      const status:any=await statusResponse.json();
-      if(!statusResponse.ok) throw new Error(status?.message||"AI Horde image status request failed.");
-      if(status.faulted) throw new Error(status.message||"AI Horde image worker failed.");
-      if(status.done){
+      const check:any=await checkResponse.json();
+      if(!checkResponse.ok) throw new Error(check?.message||"AI Horde image status request failed.");
+      if(check.faulted) throw new Error(check.message||"AI Horde image worker failed.");
+      if(check.done){
+        const statusResponse=await fetch("https://aihorde.net/api/v2/generate/status/"+encodeURIComponent(submitted.id),{
+          headers:{"Client-Agent":"Storybook-Forge:1.1"}
+        });
+        const status:any=await statusResponse.json();
+        if(!statusResponse.ok) throw new Error(status?.message||"AI Horde image result request failed.");
         const img=status.generations?.[0]?.img;
         if(!img) throw new Error("AI Horde completed without an image.");
         const value=String(img);
