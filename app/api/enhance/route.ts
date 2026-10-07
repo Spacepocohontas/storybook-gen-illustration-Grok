@@ -62,7 +62,7 @@ async function generateWithProvider(provider:string,keys:{openai?:string;openrou
       }: {})
     });
     const model=chosen==="openrouter" ? (process.env.OPENROUTER_MODEL||"openrouter/free") : (process.env.OPENAI_MODEL||"gpt-4.1-mini");
-    const result=await generateText({model:client(model),instructions,prompt:"Process the manuscript now. Return only the requested production material.",temperature:0.4});
+    const result=await generateText({model:chosen==="openrouter"?client.chat(model):client(model),system:instructions,prompt:"Process the manuscript now. Return only the requested production material.",temperature:0.4});
     return {text:result.text,provider:chosen==="openrouter"?"OpenRouter Free":"OpenAI"};
   }
 
@@ -90,7 +90,7 @@ async function generateWithProvider(provider:string,keys:{openai?:string;openrou
     if(!key) throw new Error("Pollinations key missing. Add a Pollinations key in the app.");
     const client=createOpenAI({apiKey:key,baseURL:"https://gen.pollinations.ai/v1"});
     const model=process.env.POLLINATIONS_MODEL||"openai";
-    const result=await generateText({model:client(model),instructions,prompt:"Process the manuscript now. Return only the requested production material.",temperature:0.4});
+    const result=await generateText({model:client.chat(model),system:instructions,prompt:"Process the manuscript now. Return only the requested production material.",temperature:0.4});
     return {text:result.text,provider:"Pollinations"};
   }
 
@@ -142,3 +142,4 @@ ${body.text.slice(0,100000)}`;
     return Response.json({error:message},{status:400});
   }
 }
+
