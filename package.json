@@ -8,18 +8,19 @@
     "start": "next start"
   },
   "dependencies": {
+    "@ai-sdk/openai": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "@vercel/speed-insights": "^2.0.0",
+    "ai": "latest",
     "lucide-react": "latest",
     "mammoth": "^1.9.1",
     "next": "latest",
     "pdfjs-dist": "^5.4.149",
     "react": "latest",
     "react-dom": "latest",
-    "ai": "latest",
-    "zod": "latest",
-    "@ai-sdk/openai": "latest"
+    "zod": "latest"
   },
   "devDependencies": {
     "typescript": "latest"
