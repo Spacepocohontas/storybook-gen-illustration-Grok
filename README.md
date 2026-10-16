@@ -21,3 +21,7 @@ The initial Next.js App Router foundation is intentionally separate from all oth
 
 The repository is configured for Vercel and the GitHub build check is passing. Vercel can auto-detect Next.js from this repository.
 Designed for Vercel. Keep image/provider API keys server-side. Do not put provider secrets in client code.
+
+### Document import
+
+Import selectable-text PDF, DOCX, TXT, Markdown, EPUB, ODT, RTF, HTML, JSON, CSV, and other common text files. Extraction runs locally using bundled readers and a local PDF worker. Review the extracted text before continuing. Unsupported files, legacy DOC, and scanned PDFs without selectable text produce conversion/OCR guidance; a failed import preserves the previous manuscript.
